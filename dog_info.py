@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import json
 import sqlite3
 from tabulate import tabulate
+import plotly.graph_objects as go 
 
 DOG = 'http://www.animalplanet.com/breed-selector/dog-breeds/all-breeds-a-z.html'
 DB_NAME = 'doginfo.sqlite'
@@ -205,6 +206,8 @@ def populate_breed_groups(list_of_info):
     for list_item in list_of_info:
         group = list_item[4]
         if group not in groups:
+            # if group == 'Working Dog':
+            #     group = 'Working'
             counter += 1
             groups[group] = counter
         else:
@@ -229,6 +232,62 @@ def group_table(dictionary):
     conn.close()
 
 
+def basic_query_sql(command):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    limit = 'LIMIT 10'
+    # sort = 'DESC'
+    query = f'''
+    SELECT Name, Rank, C.Country, G.BreedGroup, Size, MinLifeSpan, MaxLifeSpan FROM DOGS AS D
+    JOIN Countries AS C ON D.CountryId=C.Id JOIN Groups as G on D.BreedGroupId=G.Id
+    {limit}
+    '''
+    cur.execute(query)
+    results = cur.fetchall()
+    return results
+
+def more_query_sql(command, agg):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    limit = 'LIMIT 10'
+    sort = 'DESC'
+    if command == 'group':
+        join_and_group = 'JOIN Groups AS G ON D.BreedGroupId=G.Id GROUP BY G.BreedGroup'
+        select = 'G.BreedGroup'
+    elif command == 'origin':
+        join_and_group = 'JOIN Countries AS C ON D.BreedGroupId=C.Id GROUP BY C.Country'
+        select = 'C.Country'
+    if agg == 'rank':
+        order_by = 'AVG(Rank)'
+        sort = 'ASC'
+    elif agg == 'max':
+        order_by = 'AVG(MaxLifeSpan)'
+    elif agg == 'min':
+        order_by = 'AVG(MinLifeSpan)'
+    query = f'''
+    SELECT {select}, Avg(Rank), AVG(MinLifeSpan), AVG(MaxLifeSpan) FROM Dogs AS D
+    {join_and_group} ORDER BY {order_by} {sort} {limit}
+    '''
+    cur.execute(query)
+    results = cur.fetchall()
+    return results
+
+def plot_results(results, agg):
+    xaxis = []
+    yaxis = []
+    for i in results:
+        xaxis.append(i[0])
+        if agg == 'rank':
+            yaxis.append(i[1])
+        elif agg == 'min':
+            yaxis.append(i[2])
+        elif agg == 'max':
+            yaxis.append(i[3])
+    bar_data = go.Bar(x=xaxis, y=yaxis)
+    basic_layout = go.Layout(title="")
+    fig = go.Figure(data=bar_data, layout=basic_layout)
+    fig.write_html("bar.html", auto_open=True)
+
 if __name__ == "__main__":
     print("Creating database of dogs...\nPlease sit for your treat...")
     create_db()
@@ -241,4 +300,32 @@ if __name__ == "__main__":
     groups = populate_breed_groups(combined_info)
     group_table(groups)
     add_info(combined_info) # works
+    while True:
+        message = input("Please select 'dog', 'info', or 'exit': ").lower().strip()
+        if message == 'exit':
+            print("I hope to play with you soon!")
+            exit()
+        elif message == 'dog':
+            pass
+        elif message == 'info':
+            search = input("You can search by 'origin', 'group', 'none': ").lower().strip()
+            if search == 'origin' or search == 'group':
+                rank = input("Order results by 'rank', 'min', or 'max': ").lower().strip()
+                results = more_query_sql(search, rank)
+                headers = [f'{search}'.capitalize(), 'AKC Rank', 'Min Life Span', 'Max Life Span']
+                print(tabulate(results, headers, tablefmt="simple", floatfmt=".2f"))
+                plot = input("Do you want to plot? 'y' or 'n': ").lower().strip()
+                if plot == 'n':
+                    continue
+                elif plot == 'y':
+                    plot_results(results, rank)
+                else:
+                    print("*cocks head* I didn't understand that command.")
+            elif search == 'none':
+                results = basic_query_sql(search)
+                print(tabulate(results, tablefmt="simple"))
+            else:
+                print("*cocks head* I didn't understand that command.")
+        else:
+            print("*cocks head* I didn't understand that command.")
     
