@@ -4,9 +4,13 @@ import json
 import sqlite3
 from tabulate import tabulate
 import plotly.graph_objects as go 
+import webbrowser
 
 DOG = 'http://www.animalplanet.com/breed-selector/dog-breeds/all-breeds-a-z.html'
 DB_NAME = 'doginfo.sqlite'
+
+CACHE_FILE_NAME = 'cache.json'
+CACHE_DICT = {}
 
 def create_db():
     conn = sqlite3.connect("doginfo.sqlite")
@@ -61,8 +65,9 @@ def create_db():
 
 def get_dogs():
     dogs_dict = {}
-    url = requests.get(DOG)
-    soup = BeautifulSoup(url.text, 'html.parser')
+    dogs = make_url_request_using_cache(DOG, CACHE_DICT)
+    # url = requests.get(DOG)
+    soup = BeautifulSoup(dogs, 'html.parser')
     all_dogs_first = soup.find_all('section', id='tabAtoZ')
     dogs = all_dogs_first[0].find_all('li')
     for dog in dogs:
@@ -75,8 +80,9 @@ def get_dog_info(dictionary):
     for k,v in dictionary.items():
         info_list = []
         info_list.append(k)
-        url = requests.get(v)
-        soup = BeautifulSoup(url.text, 'html.parser')
+        url = make_url_request_using_cache(v, CACHE_DICT)
+        # url = requests.get(v)
+        soup = BeautifulSoup(url, 'html.parser')
         dog_info = soup.find_all('div', class_='stats clear')
         more_info = dog_info[0].find_all(class_='right')
         for info in more_info:
@@ -89,8 +95,9 @@ def get_dog_info(dictionary):
 def get_more_info(dictionary):
     dog_list = []
     for v in dictionary.values():
-        url = requests.get(v)
-        soup = BeautifulSoup(url.text, 'html.parser')
+        # url = requests.get(v)
+        url = make_url_request_using_cache(v, CACHE_DICT)
+        soup = BeautifulSoup(url, 'html.parser')
         all_dogs_first = soup.find_all('div', class_='body divider')
         l = []
         a = []
@@ -232,15 +239,22 @@ def group_table(dictionary):
     conn.close()
 
 
-def basic_query_sql(command):
+def basic_query_sql(command, agg, num):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    limit = 'LIMIT 10'
-    # sort = 'DESC'
+    limit = f'LIMIT {num}'
+    sort = 'DESC'
+    if agg == 'rank':
+        order_by = 'Rank'
+        sort = 'ASC'
+    elif agg == 'max':
+        order_by = 'MaxLifeSpan'
+    elif agg == 'min':
+        order_by = 'MinLifeSpan'
     query = f'''
-    SELECT Name, Rank, C.Country, G.BreedGroup, Size, MinLifeSpan, MaxLifeSpan FROM DOGS AS D
+    SELECT Name, Rank, C.Country, G.BreedGroup, Size, Barkiness, MinLifeSpan, MaxLifeSpan FROM DOGS AS D
     JOIN Countries AS C ON D.CountryId=C.Id JOIN Groups as G on D.BreedGroupId=G.Id
-    {limit}
+    ORDER BY {order_by} {sort} {limit}
     '''
     cur.execute(query)
     results = cur.fetchall()
@@ -257,6 +271,13 @@ def more_query_sql(command, agg):
     elif command == 'origin':
         join_and_group = 'JOIN Countries AS C ON D.BreedGroupId=C.Id GROUP BY C.Country'
         select = 'C.Country'
+    elif command == 'size':
+        select = 'Size'
+        join_and_group = 'GROUP BY Size'
+    elif command == 'bark':
+        select = 'Barkiness'
+        join_and_group = 'GROUP BY Barkiness'
+    
     if agg == 'rank':
         order_by = 'AVG(Rank)'
         sort = 'ASC'
@@ -265,7 +286,7 @@ def more_query_sql(command, agg):
     elif agg == 'min':
         order_by = 'AVG(MinLifeSpan)'
     query = f'''
-    SELECT {select}, Avg(Rank), AVG(MinLifeSpan), AVG(MaxLifeSpan) FROM Dogs AS D
+    SELECT {select},  COUNT(DISTINCT Name), Avg(Rank), AVG(MinLifeSpan), AVG(MaxLifeSpan) FROM Dogs AS D
     {join_and_group} ORDER BY {order_by} {sort} {limit}
     '''
     cur.execute(query)
@@ -288,7 +309,98 @@ def plot_results(results, agg):
     fig = go.Figure(data=bar_data, layout=basic_layout)
     fig.write_html("bar.html", auto_open=True)
 
+
+def launch_url(dog_breed):
+    '''Launches the web browser of a url 
+    from the global variable list URLS given
+    a specific index position
+
+    Parameters
+    ----------
+    url_number : string
+        a numeric string from the input func
+
+    Returns
+    -------
+    none
+    '''
+    for k, v in doggydict.items():
+        if k.lower() == dog_breed:
+            print(f'\nLaunching more {k} info in a web browser')
+            webbrowser.open_new(v)
+
+
+def load_cache(): 
+    ''' Opens the cache file if it exists and loads the JSON into
+    the CACHE_DICT dictionary.
+    if the cache file doesn't exist, creates a new cache dictionary
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    The opened cache: dict
+    '''
+    try:
+        cache_file = open(CACHE_FILE_NAME, 'r')
+        cache_file_contents = cache_file.read()
+        cache = json.loads(cache_file_contents)
+        cache_file.close()
+    except:
+        cache = {}
+    return cache
+
+
+def save_cache(cache):
+    ''' Saves the current state of the cache to disk
+    
+    Parameters
+    ----------
+    cache_dict: dict
+        The dictionary to save
+    
+    Returns
+    -------
+    None
+    '''
+    cache_file = open(CACHE_FILE_NAME, 'w')
+    contents_to_write = json.dumps(cache)
+    cache_file.write(contents_to_write)
+    cache_file.close()
+
+
+def make_url_request_using_cache(url, cache):
+    '''Check the cache for a saved result for the unique key for a url scrape. 
+    If the result is found, return it. Otherwise send a new 
+    request, save it, then return it.
+    
+    Parameters
+    ----------
+    url: string
+        The URL for the scrape.
+    cache:
+        The json file used to save searches.
+    
+    Returns
+    -------
+    dict
+        the results of the query as a dictionary loaded from cache
+        JSON
+    '''
+    if (url in cache.keys()): 
+        print("Retrieving stick")
+        return cache[url]    
+    else:
+        print("Throwing stick")
+        response = requests.get(url) 
+        cache[url] = response.text
+        save_cache(cache)          
+        return cache[url]          
+
 if __name__ == "__main__":
+    CACHE_DICT = load_cache()
     print("Creating database of dogs...\nPlease sit for your treat...")
     create_db()
     doggydict = get_dogs()
@@ -301,29 +413,55 @@ if __name__ == "__main__":
     group_table(groups)
     add_info(combined_info) # works
     while True:
-        message = input("Please select 'dog', 'info', or 'exit': ").lower().strip()
+        message = input("Please select 'info', or 'exit': ").lower().strip()
         if message == 'exit':
             print("I hope to play with you soon!")
             exit()
-        elif message == 'dog':
-            pass
         elif message == 'info':
-            search = input("You can search by 'origin', 'group', 'none': ").lower().strip()
-            if search == 'origin' or search == 'group':
+            search = input("You can search by 'origin', 'group', 'size', 'bark', or 'dog': ").lower().strip()
+            if search == 'origin' or search == 'group' or search == 'size' or search == 'bark':
                 rank = input("Order results by 'rank', 'min', or 'max': ").lower().strip()
-                results = more_query_sql(search, rank)
-                headers = [f'{search}'.capitalize(), 'AKC Rank', 'Min Life Span', 'Max Life Span']
-                print(tabulate(results, headers, tablefmt="simple", floatfmt=".2f"))
-                plot = input("Do you want to plot? 'y' or 'n': ").lower().strip()
-                if plot == 'n':
-                    continue
-                elif plot == 'y':
-                    plot_results(results, rank)
+                if rank == 'rank' or rank == 'min' or rank == 'max':
+                    results = more_query_sql(search, rank)
+                    headers = [f'{search}'.capitalize(), 'Number of Dogs', 'AKC Rank', 'Min Life Span', 'Max Life Span']
+                    print(tabulate(results, headers, tablefmt="simple", floatfmt=".2f"))
+                    plot = input("Do you want to plot? 'y' or 'n': ").lower().strip()
+                    if plot == 'n':
+                        continue
+                    elif plot == 'y':
+                        plot_results(results, rank)
+                    else:
+                        print("*cocks head* I didn't understand that command.")
                 else:
                     print("*cocks head* I didn't understand that command.")
-            elif search == 'none':
-                results = basic_query_sql(search)
-                print(tabulate(results, tablefmt="simple"))
+            elif search == 'dog':
+                rank = input("Order results by 'rank', 'min', or 'max': ").lower().strip()
+                if rank == 'rank' or rank == 'min' or rank == 'max':
+                    number = input("How many dogs do you want to see?: ").strip()
+                    if number.isnumeric():
+                        results = basic_query_sql(search, rank, int(number))
+                        headers = ['Dog', 'AKC Rank',  'Origin', 'Breed Group', 'Size',
+                        'Barkiness', 'Min Life Span', 'Max Life Span']
+                        print(tabulate(results, headers=headers, tablefmt="simple", floatfmt=".2f"))
+                        plot = input("Do you want to plot? 'y' or 'n': ").lower().strip()
+                        if plot == 'n':
+                            pass
+                        elif plot == 'y':
+                            plot_results(results, rank)
+                        else:
+                            print("*cocks head* I didn't understand that command.")
+                        launch = input("Enter a dog breed for more info on that dog or 'stay' to search again: ").lower().strip()
+                        for k in doggydict.keys():
+                            if launch in k.lower():
+                                launch_url(launch)
+                        if launch == 'stay':
+                            continue
+                        else:
+                            print("*cocks head* I didn't understand that command.")
+                    else:
+                        print("*cocks head* I didn't understand that command.")
+                else:
+                    print("*cocks head* I didn't understand that command.")
             else:
                 print("*cocks head* I didn't understand that command.")
         else:
