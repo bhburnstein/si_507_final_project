@@ -118,6 +118,17 @@ def get_more_info(dictionary):
                 a=a[1:]
                 if len(a) > 7:
                     a = a[:6]
+                if a[2] == 'Working Dog':
+                    a[2] = 'Working' # clean up breed groups
+                if a[1] == 'Herding':
+                    a[1] = 'Hungary' # clean up origins
+                punc = [',', '/', '&']
+                for mark in punc:
+                    if mark in a[1]:
+                        country = a[1].split(mark)
+                        a[1] = country[0].strip() # clean up origins
+                if a[1] == 'Border of Scotland and England':
+                    a[1] = 'Scotland'
                 years = a.pop(3)
                 years = years.strip(' years')
                 min_max = years.split('-')
@@ -213,8 +224,8 @@ def populate_breed_groups(list_of_info):
     for list_item in list_of_info:
         group = list_item[4]
         if group not in groups:
-            # if group == 'Working Dog':
-            #     group = 'Working'
+            if group == 'Working Dog':
+                group = 'Working'
             counter += 1
             groups[group] = counter
         else:
