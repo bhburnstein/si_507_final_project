@@ -13,6 +13,16 @@ CACHE_FILE_NAME = 'cache.json'
 CACHE_DICT = {}
 
 def create_db():
+    '''Creates a SQL database and tables.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    None
+    '''
     conn = sqlite3.connect("doginfo.sqlite")
     cur = conn.cursor()
 
@@ -64,6 +74,19 @@ def create_db():
     conn.close()
 
 def get_dogs():
+    '''Creates a dictionary of dogs from url
+    and their associated url by scraping.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        the results of the scraping with a dog breed
+        as a key and the url as the value
+    '''
     dogs_dict = {}
     dogs = make_url_request_using_cache(DOG, CACHE_DICT)
     # url = requests.get(DOG)
@@ -76,12 +99,23 @@ def get_dogs():
     return dogs_dict
 
 def get_dog_info(dictionary):
+    '''Creates a list of records associated with each dog.
+    
+    Parameters
+    ----------
+    dictionary: dict
+        The dictionary containing the urls to scrape and crawl.
+    
+    Returns
+    -------
+    list
+        Records from each dog in list format.
+    '''
     dog_list = []
     for k,v in dictionary.items():
         info_list = []
         info_list.append(k)
         url = make_url_request_using_cache(v, CACHE_DICT)
-        # url = requests.get(v)
         soup = BeautifulSoup(url, 'html.parser')
         dog_info = soup.find_all('div', class_='stats clear')
         more_info = dog_info[0].find_all(class_='right')
@@ -93,9 +127,22 @@ def get_dog_info(dictionary):
     return dog_list
 
 def get_more_info(dictionary):
+    '''Creates a list of records associated with each dog.
+    Uses a different html tag to find these records, so a 
+    second function needed.
+    
+    Parameters
+    ----------
+    dictionary: dict
+        The dictionary containing the urls to scrape and crawl.
+    
+    Returns
+    -------
+    list
+        Records from each dog in list format.
+    '''
     dog_list = []
     for v in dictionary.values():
-        # url = requests.get(v)
         url = make_url_request_using_cache(v, CACHE_DICT)
         soup = BeautifulSoup(url, 'html.parser')
         all_dogs_first = soup.find_all('div', class_='body divider')
@@ -137,6 +184,21 @@ def get_more_info(dictionary):
     return dog_list
 
 def combine_dog_lists(list_1, list_2):
+    '''Combines two lists of dog inforamtion.
+    
+    Parameters
+    ----------
+    list_1: list
+        List of dog information.
+    
+    list_2: list
+        List of dog information.
+    
+    Returns
+    -------
+    list
+        Records from each dog in list format.
+    '''
     list_of_dog_lists = []
     for i, dog in enumerate(list_1):
         doggy = list_2[i]
@@ -145,6 +207,17 @@ def combine_dog_lists(list_1, list_2):
     return list_of_dog_lists
 
 def add_info(list_of_info):
+    '''Adds records to the dogs table in the SQL database.
+    
+    Parameters
+    ----------
+    list_of_info: list
+        A list containing all the information for each dog.
+    
+    Returns
+    -------
+    None
+    '''
     select_country_id_sql = '''
         SELECT Id FROM Countries
         WHERE Country = ?
@@ -190,6 +263,19 @@ def add_info(list_of_info):
 
 
 def populate_countries(list_of_info):
+    '''Creates a dictionary with a country as the key
+    and a number as the value to be used as a foreign key.
+    
+    Parameters
+    ----------
+    list_of_info: list
+        The complete list of dog information.
+    
+    Returns
+    -------
+    dictionary
+        Country-Id in a key-value pair.
+    '''
     countries = {}
     counter = 0
     for list_item in list_of_info:
@@ -202,6 +288,17 @@ def populate_countries(list_of_info):
     return countries
                 
 def country_table(dictionary):
+    '''Adds records to the countries table in the SQL database.
+    
+    Parameters
+    ----------
+    dictionary: dictionary
+       A dictionary of the country and id as key-value pairs.
+    
+    Returns
+    -------
+    None
+    '''
     insert_countries = '''
     INSERT INTO Countries
     VALUES (NULL, ?)
@@ -219,6 +316,19 @@ def country_table(dictionary):
     conn.close()
 
 def populate_breed_groups(list_of_info):
+    '''Creates a dictionary with a breed group as the key
+    and a number as the value to be used as a foreign key.
+    
+    Parameters
+    ----------
+    list_of_info: list
+        The complete list of dog information.
+    
+    Returns
+    -------
+    dictionary
+        Breed group-Id in a key-value pair.
+    '''
     groups = {}
     counter = 0
     for list_item in list_of_info:
@@ -226,6 +336,8 @@ def populate_breed_groups(list_of_info):
         if group not in groups:
             if group == 'Working Dog':
                 group = 'Working'
+                # working dog was listed as one of the 
+                # groups. this sets it as just 'working'
             counter += 1
             groups[group] = counter
         else:
@@ -233,6 +345,17 @@ def populate_breed_groups(list_of_info):
     return groups
 
 def group_table(dictionary):
+    '''Adds records to the groups table in the SQL database.
+    
+    Parameters
+    ----------
+    dictionary: dictionary
+       A dictionary of the breed group and id as key-value pairs.
+    
+    Returns
+    -------
+    None
+    '''
     insert_groups = '''
     INSERT INTO Groups
     VALUES (NULL, ?)
