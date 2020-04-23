@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF8"/>
+    <title>Dog Searcher</title>
+</head>
+<body>
+    <h1>Browse by Grouping</h1>
+    <form action='/results' method='POST'>
+    <p>
+    Group by: <br/>
+        <input type='radio' name='group' 
+                value='breed group' checked='checked'/> Breed Group <br/>
+        <input type='radio' name='group' 
+                value='size'/> Size <br/>
+        <input type='radio' name='group' 
+                value='barkiness'/> Barkiness <br/>
+        <input type='radio' name='group' 
+                value='origin'/> Origin <br/>
+    </p>
+    Sort by: <br/>
+        <input type='radio' name='sort' 
+                value='rank' checked='checked'/> AKC Ranking <br/>
+        <input type='radio' name='sort' 
+                value='max_life'/> Max Life Span <br/>
+        <input type='radio' name='sort' 
+                value='min_life'/> Min Life Span <br/>
+        <input type='radio' name='sort' 
+                value='number'/> Number of Dogs <br/>
+    <p>
+    Sort direction: <br/>
+        <input type='radio' name='dir'
+                value='desc' checked='checked'/> Descending (High to Low) <br/>
+        <input type='radio' name='dir'
+                value='asc'/> Ascending (Low to High) <br/>
+    </p>
+    <p>
+        <input type='checkbox' name='plot'/>Plot results?<br/>
+    </p>
+    <input type='submit' value='Get Groups of Dogs'/>
+    </form>
+    <p>
+        <button onclick="document.location = '/'">Go Home</button>
+    </p>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF8"/>
+    <title>Dog Searcher</title>
+</head>
+<body>
+    <h1>Browse by Dog</h1>
+    <form action='/doggos' method='POST'>
+    <p>
+        Sort by: <br/>
+            <input type='radio' name='sort' 
+                    value='rank' checked='checked'/> AKC Ranking <br/>
+            <input type='radio' name='sort' 
+                    value='max_life'/> Max Life Span <br/>
+            <input type='radio' name='sort' 
+                    value='min_life'/> Min Life Span <br/>
+    </p>
+    <p>
+        Sort direction: <br/>
+            <input type='radio' name='dir'
+                value='desc' checked='checked'/> Descending (High to Low) <br/>
+            <input type='radio' name='dir'
+                value='asc'/> Ascending (Low to High) <br/>
+    </p>
+    <p>
+        Filter by dog origin: <br/>
+            <select name='region'>
+                <option value='All'>All regions</option>
+                {% for country in country_list %}
+                    <option value='{{ country }}'>{{ country }}</option>
+                {% endfor %}
+            </select>
+    </p>
+    <p>
+        Filter by size: <br/>
+            <select name='size'>
+                <option value='All'>All sizes</option>
+                {% for size in size_list %}
+                    <option value='{{ size }}'>{{ size }}</option>
+                {% endfor %}
+            </select>
+    </p>
+    <p>
+        Filter by breed group: <br/>
+            <select name='breed_group'>
+                <option value='All'>All groups</option>
+                {% for group in group_list %}
+                    <option value='{{ group }}'>{{ group }}</option>
+                {% endfor %}
+            </select>
+    </p>
+    <p>
+        Filter by barkiness: <br/>
+            <select name='barkiness'>
+                <option value='All bark levels'>All barks levels</option>
+                {% for bark in bark_list %}
+                    <option value="{{ bark }}">{{ bark }}</option>
+                {% endfor %}
+            </select>
+    </p>
+    <p>
+        How many dogs do you want to see? </br>
+        <input type='number' name='limit' min='1'>
+    </p>
+    <p>
+        <input type='checkbox' name='plot'/>Plot results?<br/>
+    </p>
+    <input type='submit' id='dogs' value='Get Dogs'/>
+    </form>
+    <p>
+        <button onclick="document.location = '/'">Go Home</button>
+    </p>
+</body>
+</html>

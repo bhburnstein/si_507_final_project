@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF8"/>
+    <title>Dogs: Results</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Here are your results for individual dogs!</h1>
+    <table> 
+        <tr>
+            {% for header in headers %}
+                <th>{{ header }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in results %}
+            <tr>
+                {% for k, v in doggydict.items() %}
+                    {% if k==row[0] %}
+                        <td><a href='{{v}}' target="_blank"> {{ row[0] }} </a>
+                        </td>
+                    {% endif %}
+                {% endfor %}
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td>{{ row[3] }}</td>
+                <td>{{ row[4] }}</td>
+                <td>{{ row[5] }}</td>
+                <td>{{ row[6] }}</td>
+                <td>{{ row[7] }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+    <p>
+        <button onclick="document.location = '/dogs'">Search Again</button>
+        <button onclick="document.location = '/'">Go Home</button>
+    </p>
+</body>
+</html>
