@@ -8,11 +8,11 @@ through the use of the radio buttons, check marks,
 and drop down menus.
 
 Note:
-You will need the following python packages:
-requests
-BeautifulSoup
-sqlite3
-json
-plotly
-flask
+* You will need the following python packages:
+* requests
+* BeautifulSoup
+* sqlite3
+* json
+* plotly
+* flask
 # si_507_finalproject
