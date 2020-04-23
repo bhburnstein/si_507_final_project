@@ -10,7 +10,7 @@ and drop down menus.
 Note:
 * You will need the following python packages:
 * requests
-* BeautifulSoup
+* BeautifulSoup (bs4)
 * sqlite3
 * json
 * plotly
